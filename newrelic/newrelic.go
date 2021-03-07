@@ -36,7 +36,7 @@ func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transactio
 			return txn
 		}
 	}
-	return nil
+	return newrelic.FromContext(ctx)
 }
 
 func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, context.Context) {
