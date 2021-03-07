@@ -21,6 +21,10 @@ func SetNewRelicApp(nr *newrelic.Application) {
 	NewRelicApp = nr
 }
 
+func GetNewRelicApp() *newrelic.Application {
+	return NewRelicApp
+}
+
 /// Use NewRelic better - reference https://github.com/carousell/Orion/blob/19b7601394006ca4eb9dcb65a2339c2046111f75/utils/utils.go
 
 //GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context
