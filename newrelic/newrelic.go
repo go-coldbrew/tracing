@@ -8,10 +8,6 @@ import (
 	newrelic "github.com/newrelic/go-agent/v3/newrelic"
 )
 
-const (
-	newRelicTransactionID = "NewRelicTransaction"
-)
-
 var (
 	// NewRelicApp is the reference for newrelic application
 	NewRelicApp *newrelic.Application
@@ -29,13 +25,6 @@ func GetNewRelicApp() *newrelic.Application {
 
 //GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context
 func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transaction {
-	t := ctx.Value(newRelicTransactionID)
-	if t != nil {
-		txn, ok := t.(*newrelic.Transaction)
-		if ok {
-			return txn
-		}
-	}
 	return newrelic.FromContext(ctx)
 }
 
@@ -46,10 +35,7 @@ func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, con
 
 //StoreNewRelicTransactionToContext stores a new relic transaction object to context
 func StoreNewRelicTransactionToContext(ctx context.Context, t *newrelic.Transaction) context.Context {
-	if t == nil {
-		return ctx
-	}
-	return context.WithValue(ctx, newRelicTransactionID, t)
+	return newrelic.NewContext(ctx, t)
 }
 
 //StartNRTransaction starts a new newrelic transaction
