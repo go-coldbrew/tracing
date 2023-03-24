@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"net/http"
+	"runtime/trace"
 	"strings"
 
 	nrutil "github.com/go-coldbrew/tracing/newrelic"
@@ -29,6 +30,7 @@ type tracingSpan struct {
 	dataSegment     newrelic.DatastoreSegment
 	externalSegment newrelic.ExternalSegment
 	segment         newrelic.Segment
+	runtimeRegion   *trace.Region
 }
 
 func (span *tracingSpan) End() {
@@ -45,6 +47,8 @@ func (span *tracingSpan) End() {
 	} else {
 		span.segment.End()
 	}
+
+	span.runtimeRegion.End()
 }
 
 func (span *tracingSpan) Finish() {
@@ -94,7 +98,7 @@ func (span *tracingSpan) SetError(err error) error {
 	return err
 }
 
-//NewInternalSpan starts a span for tracing internal actions
+// NewInternalSpan starts a span for tracing internal actions
 func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 	zip, ctx := opentracing.StartSpanFromContext(ctx, name)
 	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
@@ -102,13 +106,15 @@ func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 		StartTime: newrelic.StartSegmentNow(txn),
 		Name:      name,
 	}
+	reg := trace.StartRegion(ctx, name)
 	return &tracingSpan{
-		openSpan: zip,
-		segment:  seg,
+		openSpan:      zip,
+		segment:       seg,
+		runtimeRegion: reg,
 	}, ctx
 }
 
-//NewDatastoreSpan starts a span for tracing data store actions
+// NewDatastoreSpan starts a span for tracing data store actions
 func NewDatastoreSpan(ctx context.Context, datastore, operation, collection string) (Span, context.Context) {
 	name := operation
 	if !strings.HasPrefix(name, datastore) {
@@ -125,10 +131,12 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 		Operation:  operation,
 		Collection: collection,
 	}
+	reg := trace.StartRegion(ctx, name)
 	return &tracingSpan{
-		openSpan:    zip,
-		dataSegment: seg,
-		datastore:   true,
+		openSpan:      zip,
+		dataSegment:   seg,
+		datastore:     true,
+		runtimeRegion: reg,
 	}, ctx
 }
 
@@ -148,19 +156,21 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 		StartTime: newrelic.StartSegmentNow(txn),
 		URL:       url,
 	}
+	reg := trace.StartRegion(ctx, name)
 	return &tracingSpan{
 		openSpan:        zip,
 		externalSegment: seg,
 		external:        true,
+		runtimeRegion:   reg,
 	}, ctx
 }
 
-//NewExternalSpan starts a span for tracing external actions
+// NewExternalSpan starts a span for tracing external actions
 func NewExternalSpan(ctx context.Context, name string, url string) (Span, context.Context) {
 	return buildExternalSpan(ctx, name, url)
 }
 
-//NewHTTPExternalSpan starts a span for tracing external HTTP actions
+// NewHTTPExternalSpan starts a span for tracing external HTTP actions
 func NewHTTPExternalSpan(ctx context.Context, name string, url string, hdr http.Header) (Span, context.Context) {
 	s, ctx := buildExternalSpan(ctx, name, url)
 	traceHTTPHeaders(ctx, s.openSpan, hdr)
@@ -201,7 +211,7 @@ func (w metadataReaderWriter) ForeachKey(handler func(key, val string) error) er
 	return nil
 }
 
-//ClientSpan starts a new client span linked to the existing spans if any are found
+// ClientSpan starts a new client span linked to the existing spans if any are found
 func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span) {
 	tracer := opentracing.GlobalTracer()
 	var clientSpan opentracing.Span
