@@ -14,6 +14,8 @@ import "github.com/go-coldbrew/tracing"
 - [func CloneContextValues(parent context.Context) context.Context](<#func-clonecontextvalues>)
 - [func GRPCTracingSpan(operationName string, ctx context.Context) context.Context](<#func-grpctracingspan>)
 - [func MergeContextValues(parent context.Context, main context.Context) context.Context](<#func-mergecontextvalues>)
+- [func MergeParentContext(parent context.Context, main context.Context) context.Context](<#func-mergeparentcontext>)
+- [func NewContextWithParentValues(parent context.Context) context.Context](<#func-newcontextwithparentvalues>)
 - [type Span](<#type-span>)
   - [func NewDatastoreSpan(ctx context.Context, datastore, operation, collection string) (Span, context.Context)](<#func-newdatastorespan>)
   - [func NewExternalSpan(ctx context.Context, name string, url string) (Span, context.Context)](<#func-newexternalspan>)
@@ -21,7 +23,7 @@ import "github.com/go-coldbrew/tracing"
   - [func NewInternalSpan(ctx context.Context, name string) (Span, context.Context)](<#func-newinternalspan>)
 
 
-## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L205>)
+## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L215>)
 
 ```go
 func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span)
@@ -29,29 +31,45 @@ func ClientSpan(operationName string, ctx context.Context) (context.Context, ope
 
 ClientSpan starts a new client span linked to the existing spans if any are found
 
-## func [CloneContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L23>)
+## func [CloneContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L24>)
 
 ```go
 func CloneContextValues(parent context.Context) context.Context
 ```
 
-CloneContextValues clones a given context values and returns a new context obj which is not affected by Cancel\, Deadline etc
+**Deprecated: The function name is a bit confusing, use CloneContextValues instead**
 
-## func [GRPCTracingSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L221>)
+## func [GRPCTracingSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L231>)
 
 ```go
 func GRPCTracingSpan(operationName string, ctx context.Context) context.Context
 ```
 
-## func [MergeContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L31>)
+## func [MergeContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L43>)
 
 ```go
 func MergeContextValues(parent context.Context, main context.Context) context.Context
 ```
 
-MergeContextValues merged the given main context with a parent conetext\, Cancel/Deadline etc are used from the main context and values are look in both the context
+MergeContextValues merged the given main context with a parent context, Cancel/Deadline etc are used from the main context and values are looked in both the contexts
 
-## type [Span](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L17-L23>)
+## func [MergeParentContext](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L38>)
+
+```go
+func MergeParentContext(parent context.Context, main context.Context) context.Context
+```
+
+**Deprecated: The function name is a bit confusing, use MergeContextValues instead**
+
+## func [NewContextWithParentValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L29>)
+
+```go
+func NewContextWithParentValues(parent context.Context) context.Context
+```
+
+NewContextWithParentValues clones a given context values and returns a new context obj which is not affected by Cancel, Deadline etc
+
+## type [Span](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L18-L24>)
 
 Span defines an interface for implementing a tracing span
 
@@ -65,7 +83,7 @@ type Span interface {
 }
 ```
 
-### func [NewDatastoreSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L112>)
+### func [NewDatastoreSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L118>)
 
 ```go
 func NewDatastoreSpan(ctx context.Context, datastore, operation, collection string) (Span, context.Context)
@@ -73,7 +91,7 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 
 NewDatastoreSpan starts a span for tracing data store actions
 
-### func [NewExternalSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L159>)
+### func [NewExternalSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L169>)
 
 ```go
 func NewExternalSpan(ctx context.Context, name string, url string) (Span, context.Context)
@@ -81,7 +99,7 @@ func NewExternalSpan(ctx context.Context, name string, url string) (Span, contex
 
 NewExternalSpan starts a span for tracing external actions
 
-### func [NewHTTPExternalSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L164>)
+### func [NewHTTPExternalSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L174>)
 
 ```go
 func NewHTTPExternalSpan(ctx context.Context, name string, url string, hdr http.Header) (Span, context.Context)
@@ -89,7 +107,7 @@ func NewHTTPExternalSpan(ctx context.Context, name string, url string, hdr http.
 
 NewHTTPExternalSpan starts a span for tracing external HTTP actions
 
-### func [NewInternalSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L98>)
+### func [NewInternalSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L102>)
 
 ```go
 func NewInternalSpan(ctx context.Context, name string) (Span, context.Context)
