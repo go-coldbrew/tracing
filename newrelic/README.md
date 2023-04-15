@@ -30,13 +30,13 @@ var (
 )
 ```
 
-## func [FinishNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L65>)
+## func [FinishNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L71>)
 
 ```go
 func FinishNRTransaction(ctx context.Context, err error)
 ```
 
-FinishNRTransaction finishes an existing transaction
+FinishNRTransaction finishes an existing transaction if there is no transaction in the context, it does nothing
 
 ## func [GetNewRelicApp](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L20>)
 
@@ -44,27 +44,29 @@ FinishNRTransaction finishes an existing transaction
 func GetNewRelicApp() *newrelic.Application
 ```
 
-## func [GetNewRelicTransactionFromContext](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L27>)
+## func [GetNewRelicTransactionFromContext](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L28>)
 
 ```go
 func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transaction
 ```
 
-GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context
+GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context if there is no transaction in the context, it returns nil
 
-## func [GetOrStartNew](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L31>)
+## func [GetOrStartNew](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L34>)
 
 ```go
 func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, context.Context)
 ```
 
-## func [IgnoreNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L74>)
+GetOrStartNew returns a new relic transaction from context if there is no transaction in the context, it starts a new transaction
+
+## func [IgnoreNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L81>)
 
 ```go
 func IgnoreNRTransaction(ctx context.Context)
 ```
 
-IgnoreNRTransaction ignores this NR trasaction and prevents it from being reported
+IgnoreNRTransaction ignores this NR trasaction and prevents it from being reported can be used to ignore health check transactions etc
 
 ## func [SetNewRelicApp](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L16>)
 
@@ -72,21 +74,21 @@ IgnoreNRTransaction ignores this NR trasaction and prevents it from being report
 func SetNewRelicApp(nr *newrelic.Application)
 ```
 
-## func [StartNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L42>)
+## func [StartNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L47>)
 
 ```go
 func StartNRTransaction(path string, ctx context.Context, req *http.Request, w http.ResponseWriter) context.Context
 ```
 
-StartNRTransaction starts a new newrelic transaction
+StartNRTransaction starts a new newrelic transaction if there is already a transaction in the context, it will start a child transaction
 
-## func [StoreNewRelicTransactionToContext](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L37>)
+## func [StoreNewRelicTransactionToContext](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L41>)
 
 ```go
 func StoreNewRelicTransactionToContext(ctx context.Context, t *newrelic.Transaction) context.Context
 ```
 
-StoreNewRelicTransactionToContext stores a new relic transaction object to context
+StoreNewRelicTransactionToContext stores a new relic transaction object to context if there is already a transaction in the context, it will be overwritten by the new one passed in the argument
 
 
 
