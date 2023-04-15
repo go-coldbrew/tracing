@@ -8,6 +8,8 @@
 import "github.com/go-coldbrew/tracing"
 ```
 
+Package tracing is a library that provides distributed tracing to Go applications. It offers features such as collecting performance data of an application, identifying where requests are spending most of their time, and segmenting requests. It trace exporting to support 3rd\-party services such as Jaeger, Zipkin, Opentelemetry, and NewRelic. Go\-Coldbrew Tracing helps developers quickly identify issues and take corrective action when performance bottlenecks occur.
+
 ## Index
 
 - [func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span)](<#func-clientspan>)
