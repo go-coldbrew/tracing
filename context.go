@@ -26,6 +26,7 @@ func CloneContextValues(parent context.Context) context.Context {
 }
 
 // NewContextWithParentValues clones a given context values and returns a new context obj which is not affected by Cancel, Deadline etc
+// can be used to pass context values to a new context which is not affected by the parent context cancel/deadline etc from parent
 func NewContextWithParentValues(parent context.Context) context.Context {
 	return &cloneContext{
 		parent:  parent,
@@ -40,6 +41,7 @@ func MergeParentContext(parent context.Context, main context.Context) context.Co
 }
 
 // MergeContextValues merged the given main context with a parent context, Cancel/Deadline etc are used from the main context and values are looked in both the contexts
+// can be use to merge a parent context with a new context, the new context will have the values from both the contexts
 func MergeContextValues(parent context.Context, main context.Context) context.Context {
 	return &cloneContext{
 		parent:  parent,

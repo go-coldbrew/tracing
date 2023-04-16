@@ -23,22 +23,27 @@ func GetNewRelicApp() *newrelic.Application {
 
 /// Use NewRelic better - reference https://github.com/carousell/Orion/blob/19b7601394006ca4eb9dcb65a2339c2046111f75/utils/utils.go
 
-//GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context
+// GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context
+// if there is no transaction in the context, it returns nil
 func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transaction {
 	return newrelic.FromContext(ctx)
 }
 
+// GetOrStartNew returns a new relic transaction from context
+// if there is no transaction in the context, it starts a new transaction
 func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, context.Context) {
 	ctx = StartNRTransaction(name, ctx, nil, nil)
 	return GetNewRelicTransactionFromContext(ctx), ctx
 }
 
-//StoreNewRelicTransactionToContext stores a new relic transaction object to context
+// StoreNewRelicTransactionToContext stores a new relic transaction object to context
+// if there is already a transaction in the context, it will be overwritten by the new one passed in the argument
 func StoreNewRelicTransactionToContext(ctx context.Context, t *newrelic.Transaction) context.Context {
 	return newrelic.NewContext(ctx, t)
 }
 
-//StartNRTransaction starts a new newrelic transaction
+// StartNRTransaction starts a new newrelic transaction
+// if there is already a transaction in the context, it will start a child transaction
 func StartNRTransaction(path string, ctx context.Context, req *http.Request, w http.ResponseWriter) context.Context {
 	if req == nil {
 		if !strings.HasPrefix(path, "/") {
@@ -61,7 +66,8 @@ func StartNRTransaction(path string, ctx context.Context, req *http.Request, w h
 	return ctx
 }
 
-//FinishNRTransaction finishes an existing transaction
+// FinishNRTransaction finishes an existing transaction
+// if there is no transaction in the context, it does nothing
 func FinishNRTransaction(ctx context.Context, err error) {
 	t := GetNewRelicTransactionFromContext(ctx)
 	if t != nil {
@@ -70,7 +76,8 @@ func FinishNRTransaction(ctx context.Context, err error) {
 	}
 }
 
-//IgnoreNRTransaction ignores this NR trasaction and prevents it from being reported
+// IgnoreNRTransaction ignores this NR trasaction and prevents it from being reported
+// can be used to ignore health check transactions etc
 func IgnoreNRTransaction(ctx context.Context) {
 	t := GetNewRelicTransactionFromContext(ctx)
 	if t != nil {

@@ -15,11 +15,17 @@ import (
 )
 
 // Span defines an interface for implementing a tracing span
+// This is used to abstract the underlying tracing implementation, currently using opentracing/opentelemetry and newrelic tracing libraries for implementation
 type Span interface {
+	// End ends the span, can also use Finish()
 	End()
+	// Finish ends the span, can also use End()
 	Finish()
+	// SetTag sets a tag on the span, can be used to add custom attributes
 	SetTag(key string, value interface{})
+	// SetQuery sets the query on the span, can be used to add query for datastore spans
 	SetQuery(query string)
+	// SetError sets the error on the span
 	SetError(err error) error
 }
 
@@ -99,6 +105,7 @@ func (span *tracingSpan) SetError(err error) error {
 }
 
 // NewInternalSpan starts a span for tracing internal actions
+// This is used to trace actions within the same service, for example, a function call within the same service
 func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 	zip, ctx := opentracing.StartSpanFromContext(ctx, name)
 	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
@@ -115,6 +122,7 @@ func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 }
 
 // NewDatastoreSpan starts a span for tracing data store actions
+// This is used to trace actions against a data store, for example, a database query or a redis call
 func NewDatastoreSpan(ctx context.Context, datastore, operation, collection string) (Span, context.Context) {
 	name := operation
 	if !strings.HasPrefix(name, datastore) {
@@ -166,11 +174,14 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 }
 
 // NewExternalSpan starts a span for tracing external actions
+// This is used to trace actions against an external service, for example, a call to another service or a call to an external API
 func NewExternalSpan(ctx context.Context, name string, url string) (Span, context.Context) {
 	return buildExternalSpan(ctx, name, url)
 }
 
 // NewHTTPExternalSpan starts a span for tracing external HTTP actions
+// This is used to trace actions against an external service, for example, a call to another service or a call to an external API
+// It also adds the HTTP headers to the span so that the external service can trace the call back to this service if needed
 func NewHTTPExternalSpan(ctx context.Context, name string, url string, hdr http.Header) (Span, context.Context) {
 	s, ctx := buildExternalSpan(ctx, name, url)
 	traceHTTPHeaders(ctx, s.openSpan, hdr)
@@ -212,6 +223,7 @@ func (w metadataReaderWriter) ForeachKey(handler func(key, val string) error) er
 }
 
 // ClientSpan starts a new client span linked to the existing spans if any are found
+// in the context. The returned context should be used in place of the original
 func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span) {
 	tracer := opentracing.GlobalTracer()
 	var clientSpan opentracing.Span
@@ -228,6 +240,8 @@ func ClientSpan(operationName string, ctx context.Context) (context.Context, ope
 	return ctx, clientSpan
 }
 
+// GRPCTracingSpan starts a new client span linked to the existing spans if any are found
+// in the context. The returned context should be used in place of the original
 func GRPCTracingSpan(operationName string, ctx context.Context) context.Context {
 	tracer := opentracing.GlobalTracer()
 	// Retrieve gRPC metadata.
