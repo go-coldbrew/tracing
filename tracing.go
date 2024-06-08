@@ -108,9 +108,9 @@ func (span *tracingSpan) SetError(err error) error {
 // This is used to trace actions within the same service, for example, a function call within the same service
 func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 	zip, ctx := opentracing.StartSpanFromContext(ctx, name)
-	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
+	txn, ctx := nrutil.GetOrStartNew(ctx, name)
 	seg := newrelic.Segment{
-		StartTime: newrelic.StartSegmentNow(txn),
+		StartTime: txn.StartSegmentNow(),
 		Name:      name,
 	}
 	reg := trace.StartRegion(ctx, name)
@@ -132,9 +132,9 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 	zip.SetTag("store", datastore)
 	zip.SetTag("collection", collection)
 	zip.SetTag("operation", operation)
-	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
+	txn, ctx := nrutil.GetOrStartNew(ctx, datastore+":"+operation+":"+collection)
 	seg := newrelic.DatastoreSegment{
-		StartTime:  newrelic.StartSegmentNow(txn),
+		StartTime:  txn.StartSegmentNow(),
 		Product:    newrelic.DatastoreProduct(datastore),
 		Operation:  operation,
 		Collection: collection,
@@ -159,9 +159,9 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 	}
 
 	zip.SetTag("url", url)
-	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
+	txn, ctx := nrutil.GetOrStartNew(ctx, name)
 	seg := newrelic.ExternalSegment{
-		StartTime: newrelic.StartSegmentNow(txn),
+		StartTime: txn.StartSegmentNow(),
 		URL:       url,
 	}
 	reg := trace.StartRegion(ctx, name)
@@ -254,14 +254,14 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 	if span := opentracing.SpanFromContext(ctx); span != nil {
 		// There's nothing we can do with an error here.
 		if err := tracer.Inject(span.Context(), opentracing.TextMap, metadataReaderWriter{&md}); err != nil {
-			//log.Info(ctx, "err", err, "component", "tracing")
+			// log.Info(ctx, "err", err, "component", "tracing")
 		}
 	}
 
 	var span opentracing.Span
 	wireContext, err := tracer.Extract(opentracing.TextMap, metadataReaderWriter{&md})
 	if err != nil && err != opentracing.ErrSpanContextNotFound {
-		//log.Info(ctx, "err", err, "component", "tracing")
+		// log.Info(ctx, "err", err, "component", "tracing")
 	}
 	span = tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
 	ctx = opentracing.ContextWithSpan(ctx, span)
