@@ -37,6 +37,7 @@ type tracingSpan struct {
 	externalSegment newrelic.ExternalSegment
 	segment         newrelic.Segment
 	runtimeRegion   *trace.Region
+	txn             *newrelic.Transaction
 }
 
 func (span *tracingSpan) End() {
@@ -52,6 +53,10 @@ func (span *tracingSpan) End() {
 		span.externalSegment.End()
 	} else {
 		span.segment.End()
+	}
+
+	if span.txn != nil {
+		span.txn.End()
 	}
 
 	span.runtimeRegion.End()
@@ -101,6 +106,10 @@ func (span *tracingSpan) SetError(err error) error {
 	} else {
 		span.segment.AddAttribute("error", err)
 	}
+
+	if span.txn != nil {
+		span.txn.NoticeError(err)
+	}
 	return err
 }
 
@@ -108,17 +117,29 @@ func (span *tracingSpan) SetError(err error) error {
 // This is used to trace actions within the same service, for example, a function call within the same service
 func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 	zip, ctx := opentracing.StartSpanFromContext(ctx, name)
-	txn, ctx := nrutil.GetOrStartNew(ctx, name)
+
+	txnStarted := false
+	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
+	if txn == nil {
+		txnStarted = true
+		ctx = nrutil.StartNRTransaction(name, ctx, nil, nil)
+		txn = nrutil.GetNewRelicTransactionFromContext(ctx)
+	}
+
 	seg := newrelic.Segment{
 		StartTime: txn.StartSegmentNow(),
 		Name:      name,
 	}
 	reg := trace.StartRegion(ctx, name)
-	return &tracingSpan{
+	span := &tracingSpan{
 		openSpan:      zip,
 		segment:       seg,
 		runtimeRegion: reg,
-	}, ctx
+	}
+	if txnStarted {
+		span.txn = txn
+	}
+	return span, ctx
 }
 
 // NewDatastoreSpan starts a span for tracing data store actions
@@ -132,7 +153,15 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 	zip.SetTag("store", datastore)
 	zip.SetTag("collection", collection)
 	zip.SetTag("operation", operation)
-	txn, ctx := nrutil.GetOrStartNew(ctx, datastore+":"+operation+":"+collection)
+
+	txnStarted := false
+	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
+	if txn == nil {
+		txnStarted = true
+		ctx = nrutil.StartNRTransaction(datastore+":"+operation+":"+collection, ctx, nil, nil)
+		txn = nrutil.GetNewRelicTransactionFromContext(ctx)
+	}
+
 	seg := newrelic.DatastoreSegment{
 		StartTime:  txn.StartSegmentNow(),
 		Product:    newrelic.DatastoreProduct(datastore),
@@ -140,12 +169,16 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 		Collection: collection,
 	}
 	reg := trace.StartRegion(ctx, name)
-	return &tracingSpan{
+	span := &tracingSpan{
 		openSpan:      zip,
 		dataSegment:   seg,
 		datastore:     true,
 		runtimeRegion: reg,
-	}, ctx
+	}
+	if txnStarted {
+		span.txn = txn
+	}
+	return span, ctx
 }
 
 func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSpan, context.Context) {
@@ -159,18 +192,29 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 	}
 
 	zip.SetTag("url", url)
-	txn, ctx := nrutil.GetOrStartNew(ctx, name)
+	txnStarted := false
+	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
+	if txn == nil {
+		txnStarted = true
+		ctx = nrutil.StartNRTransaction(name, ctx, nil, nil)
+		txn = nrutil.GetNewRelicTransactionFromContext(ctx)
+	}
+
 	seg := newrelic.ExternalSegment{
 		StartTime: txn.StartSegmentNow(),
 		URL:       url,
 	}
 	reg := trace.StartRegion(ctx, name)
-	return &tracingSpan{
+	span := &tracingSpan{
 		openSpan:        zip,
 		externalSegment: seg,
 		external:        true,
 		runtimeRegion:   reg,
-	}, ctx
+	}
+	if txnStarted {
+		span.txn = txn
+	}
+	return span, ctx
 }
 
 // NewExternalSpan starts a span for tracing external actions

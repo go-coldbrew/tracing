@@ -3,15 +3,14 @@ package newrelic
 import (
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 
 	newrelic "github.com/newrelic/go-agent/v3/newrelic"
 )
 
-var (
-	// NewRelicApp is the reference for newrelic application
-	NewRelicApp *newrelic.Application
-)
+// NewRelicApp is the reference for newrelic application
+var NewRelicApp *newrelic.Application
 
 func SetNewRelicApp(nr *newrelic.Application) {
 	NewRelicApp = nr
@@ -32,7 +31,10 @@ func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transactio
 // GetOrStartNew returns a new relic transaction from context
 // if there is no transaction in the context, it starts a new transaction
 func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, context.Context) {
-	ctx = StartNRTransaction(name, ctx, nil, nil)
+	txn := GetNewRelicTransactionFromContext(ctx)
+	if txn != nil {
+		ctx = StartNRTransaction(name, ctx, nil, nil)
+	}
 	return GetNewRelicTransactionFromContext(ctx), ctx
 }
 
@@ -45,21 +47,30 @@ func StoreNewRelicTransactionToContext(ctx context.Context, t *newrelic.Transact
 // StartNRTransaction starts a new newrelic transaction
 // if there is already a transaction in the context, it will start a child transaction
 func StartNRTransaction(path string, ctx context.Context, req *http.Request, w http.ResponseWriter) context.Context {
-	if req == nil {
-		if !strings.HasPrefix(path, "/") {
-			path = "/" + path
-		}
-		req, _ = http.NewRequest("", path, nil)
-	}
 	// check if transaction has been initialized
 	if NewRelicApp == nil {
 		return ctx
 	}
+
+	if !strings.HasPrefix(path, "/") {
+		path = "/" + path
+	}
+
 	t := GetNewRelicTransactionFromContext(ctx)
 	if t == nil {
 		t = NewRelicApp.StartTransaction(path)
 		if t != nil {
-			t.SetWebRequestHTTP(req)
+			if req != nil {
+				t.SetWebRequestHTTP(req)
+			} else {
+				rl, _ := url.Parse(path)
+				t.SetWebRequest(
+					newrelic.WebRequest{
+						Type: string(newrelic.TransportUnknown),
+						URL:  rl,
+					},
+				)
+			}
 			ctx = StoreNewRelicTransactionToContext(ctx, t)
 		}
 	}
