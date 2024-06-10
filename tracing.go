@@ -106,6 +106,10 @@ func (span *tracingSpan) SetError(err error) error {
 	} else {
 		span.segment.AddAttribute("error", err)
 	}
+
+	if span.txn != nil {
+		span.txn.NoticeError(err)
+	}
 	return err
 }
 
