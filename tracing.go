@@ -332,6 +332,30 @@ func (w metadataReaderWriter) ForeachKey(handler func(key, val string) error) er
 	return nil
 }
 
+type metadataTextMapCarrier struct {
+	md *metadata.MD
+}
+
+func (c metadataTextMapCarrier) Get(key string) string {
+	values := c.md.Get(key)
+	if len(values) == 0 {
+		return ""
+	}
+	return values[0]
+}
+
+func (c metadataTextMapCarrier) Set(key, value string) {
+	c.md.Set(key, value)
+}
+
+func (c metadataTextMapCarrier) Keys() []string {
+	keys := make([]string, 0, len(*c.md))
+	for k := range *c.md {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // ClientSpan starts a new client span linked to the existing spans if any are found
 // in the context. The returned context should be used in place of the original
 func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span, otelTrace.Span) {
@@ -361,7 +385,8 @@ func ClientSpan(operationName string, ctx context.Context) (context.Context, ope
 // in the context. The returned context should be used in place of the original
 func GRPCTracingSpan(operationName string, ctx context.Context) context.Context {
 	tracer := opentracing.GlobalTracer()
-	// Retrieve gRPC metadata.
+
+	// Retrieve gRPC metadata
 	md, ok := metadata.FromIncomingContext(ctx)
 	if ok {
 		md = md.Copy()
@@ -375,6 +400,7 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 		}
 	}
 
+	// OpenTracing span
 	wireContext, err := tracer.Extract(opentracing.TextMap, metadataReaderWriter{&md})
 	if err != nil && !errors.Is(err, opentracing.ErrSpanContextNotFound) {
 		// log.Info(ctx, "err", err, "component", "tracing")
@@ -383,7 +409,10 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 	span := tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
-	// OpenTelemetry span
+	// OpenTelemetry span: extract parent from incoming gRPC metadata
+	propagator := otel.GetTextMapPropagator()
+	ctx = propagator.Extract(ctx, metadataTextMapCarrier{md: &md})
+
 	otelTracer := otel.Tracer("grpc-server")
 	ctx, otelSpan := otelTracer.Start(ctx, operationName, otelTrace.WithSpanKind(otelTrace.SpanKindServer))
 	ctx = otelTrace.ContextWithSpan(ctx, otelSpan)
