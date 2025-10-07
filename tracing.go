@@ -3,6 +3,9 @@ package tracing
 import (
 	"context"
 	"encoding/base64"
+	"errors"
+	"fmt"
+	"go.opentelemetry.io/otel/propagation"
 	"net/http"
 	"runtime/trace"
 	"strings"
@@ -12,6 +15,11 @@ import (
 	opentracing "github.com/opentracing/opentracing-go"
 	otext "github.com/opentracing/opentracing-go/ext"
 	"google.golang.org/grpc/metadata"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	otelTrace "go.opentelemetry.io/otel/trace"
 )
 
 // Span defines an interface for implementing a tracing span
@@ -38,6 +46,7 @@ type tracingSpan struct {
 	segment         newrelic.Segment
 	runtimeRegion   *trace.Region
 	txn             *newrelic.Transaction
+	otelSpan        otelTrace.Span
 }
 
 func (span *tracingSpan) End() {
@@ -45,7 +54,10 @@ func (span *tracingSpan) End() {
 		// dont panic when called against a nil span
 		return
 	}
-	span.openSpan.Finish()
+
+	if span.openSpan != nil {
+		span.openSpan.Finish()
+	}
 
 	if span.datastore {
 		span.dataSegment.End()
@@ -59,25 +71,37 @@ func (span *tracingSpan) End() {
 		span.txn.End()
 	}
 
-	span.runtimeRegion.End()
+	if span.runtimeRegion != nil {
+		span.runtimeRegion.End()
+	}
+
+	if span.otelSpan != nil {
+		span.otelSpan.End()
+	}
 }
 
-func (span *tracingSpan) Finish() {
-	span.End()
-}
+func (span *tracingSpan) Finish() { span.End() }
 
 func (span *tracingSpan) SetTag(key string, value interface{}) {
 	if span == nil {
 		// dont panic when called against a nil span
 		return
 	}
-	span.openSpan.SetTag(key, value)
+
+	if span.openSpan != nil {
+		span.openSpan.SetTag(key, value)
+	}
+
 	if span.datastore {
 		span.dataSegment.AddAttribute(key, value)
 	} else if span.external {
 		span.externalSegment.AddAttribute(key, value)
 	} else {
 		span.segment.AddAttribute(key, value)
+	}
+
+	if span.otelSpan != nil {
+		span.otelSpan.SetAttributes(attribute.String(key, toString(value)))
 	}
 }
 
@@ -86,9 +110,15 @@ func (span *tracingSpan) SetQuery(query string) {
 		// dont panic when called against a nil span
 		return
 	}
-	span.openSpan.SetTag("query", query)
+
+	if span.openSpan != nil {
+		span.openSpan.SetTag("query", query)
+	}
 	if span.datastore {
 		span.dataSegment.ParameterizedQuery = query
+	}
+	if span.otelSpan != nil {
+		span.otelSpan.SetAttributes(attribute.String("query", query))
 	}
 }
 
@@ -97,8 +127,12 @@ func (span *tracingSpan) SetError(err error) error {
 		// dont panic when called against a nil span
 		return err
 	}
-	span.openSpan.SetTag("error", "true")
-	span.openSpan.SetTag("errorDetails", err.Error())
+
+	if span.openSpan != nil {
+		span.openSpan.SetTag("error", "true")
+		span.openSpan.SetTag("errorDetails", err.Error())
+	}
+
 	if span.datastore {
 		span.dataSegment.AddAttribute("error", err)
 	} else if span.external {
@@ -110,7 +144,23 @@ func (span *tracingSpan) SetError(err error) error {
 	if span.txn != nil {
 		span.txn.NoticeError(err)
 	}
+
+	if span.otelSpan != nil {
+		span.otelSpan.RecordError(err)
+		span.otelSpan.SetStatus(codes.Error, err.Error())
+	}
+
 	return err
+}
+
+// helper to convert interface{} to string for setting otel attributes
+func toString(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	default:
+		return strings.TrimSpace(strings.ReplaceAll(fmt.Sprintf("%v", v), "\n", " "))
+	}
 }
 
 // NewInternalSpan starts a span for tracing internal actions
@@ -131,15 +181,21 @@ func NewInternalSpan(ctx context.Context, name string) (Span, context.Context) {
 		Name:      name,
 	}
 	reg := trace.StartRegion(ctx, name)
+
+	otelTracer := otel.Tracer("internal")
+	otelCtx, otelSpan := otelTracer.Start(ctx, name)
+
 	span := &tracingSpan{
 		openSpan:      zip,
 		segment:       seg,
 		runtimeRegion: reg,
+		otelSpan:      otelSpan,
 	}
 	if txnStarted {
 		span.txn = txn
 	}
-	return span, ctx
+
+	return span, otelCtx
 }
 
 // NewDatastoreSpan starts a span for tracing data store actions
@@ -169,20 +225,25 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 		Collection: collection,
 	}
 	reg := trace.StartRegion(ctx, name)
+
+	otelTracer := otel.Tracer("datastore")
+	otelCtx, otelSpan := otelTracer.Start(ctx, name)
+
 	span := &tracingSpan{
 		openSpan:      zip,
 		dataSegment:   seg,
 		datastore:     true,
 		runtimeRegion: reg,
+		otelSpan:      otelSpan,
 	}
 	if txnStarted {
 		span.txn = txn
 	}
-	return span, ctx
+	return span, otelCtx
 }
 
 func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSpan, context.Context) {
-	ctx, zip := ClientSpan(name, ctx)
+	ctx, zip, otelSpan := ClientSpan(name, ctx)
 
 	if !strings.HasPrefix(url, "/") {
 		url = "/" + url
@@ -210,6 +271,7 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 		externalSegment: seg,
 		external:        true,
 		runtimeRegion:   reg,
+		otelSpan:        otelSpan,
 	}
 	if txnStarted {
 		span.txn = txn
@@ -239,6 +301,10 @@ func traceHTTPHeaders(ctx context.Context, sp opentracing.Span, hdr http.Header)
 		sp.Context(),
 		opentracing.HTTPHeaders,
 		opentracing.HTTPHeadersCarrier(hdr))
+
+	// propagate OTel context into HTTP headers
+	propagator := otel.GetTextMapPropagator()
+	propagator.Inject(ctx, propagation.HeaderCarrier(hdr))
 }
 
 // A type that conforms to opentracing.TextMapReader and
@@ -268,7 +334,8 @@ func (w metadataReaderWriter) ForeachKey(handler func(key, val string) error) er
 
 // ClientSpan starts a new client span linked to the existing spans if any are found
 // in the context. The returned context should be used in place of the original
-func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span) {
+func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span, otelTrace.Span) {
+	// OpenTracing span
 	tracer := opentracing.GlobalTracer()
 	var clientSpan opentracing.Span
 	if parentSpan := opentracing.SpanFromContext(ctx); parentSpan != nil {
@@ -281,12 +348,18 @@ func ClientSpan(operationName string, ctx context.Context) (context.Context, ope
 	}
 	otext.SpanKindRPCClient.Set(clientSpan)
 	ctx = opentracing.ContextWithSpan(ctx, clientSpan)
-	return ctx, clientSpan
+
+	// OpenTelemetry span
+	otelTracer := otel.Tracer("client")
+	ctx, otelSpan := otelTracer.Start(ctx,
+		operationName, otelTrace.WithSpanKind(otelTrace.SpanKindClient))
+
+	return ctx, clientSpan, otelSpan
 }
 
 // GRPCTracingSpan starts a new client span linked to the existing spans if any are found
 // in the context. The returned context should be used in place of the original
-func GRPCTracingSpan(operationName string, ctx context.Context) context.Context {
+func GRPCTracingSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span, otelTrace.Span) {
 	tracer := opentracing.GlobalTracer()
 	// Retrieve gRPC metadata.
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -302,13 +375,18 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 		}
 	}
 
-	var span opentracing.Span
 	wireContext, err := tracer.Extract(opentracing.TextMap, metadataReaderWriter{&md})
-	if err != nil && err != opentracing.ErrSpanContextNotFound {
+	if err != nil && !errors.Is(err, opentracing.ErrSpanContextNotFound) {
 		// log.Info(ctx, "err", err, "component", "tracing")
 	}
-	span = tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
+
+	span := tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	ctx = metadata.NewOutgoingContext(ctx, md)
-	return ctx
+
+	// OpenTelemetry span
+	otelTracer := otel.Tracer("grpc-server")
+	ctx, otelSpan := otelTracer.Start(ctx, operationName, otelTrace.WithSpanKind(otelTrace.SpanKindServer))
+
+	return ctx, span, otelSpan
 }
