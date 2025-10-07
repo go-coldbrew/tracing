@@ -359,7 +359,7 @@ func ClientSpan(operationName string, ctx context.Context) (context.Context, ope
 
 // GRPCTracingSpan starts a new client span linked to the existing spans if any are found
 // in the context. The returned context should be used in place of the original
-func GRPCTracingSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span, otelTrace.Span) {
+func GRPCTracingSpan(operationName string, ctx context.Context) context.Context {
 	tracer := opentracing.GlobalTracer()
 	// Retrieve gRPC metadata.
 	md, ok := metadata.FromIncomingContext(ctx)
@@ -382,11 +382,12 @@ func GRPCTracingSpan(operationName string, ctx context.Context) (context.Context
 
 	span := tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
 	ctx = opentracing.ContextWithSpan(ctx, span)
-	ctx = metadata.NewOutgoingContext(ctx, md)
 
 	// OpenTelemetry span
 	otelTracer := otel.Tracer("grpc-server")
 	ctx, otelSpan := otelTracer.Start(ctx, operationName, otelTrace.WithSpanKind(otelTrace.SpanKindServer))
+	ctx = otelTrace.ContextWithSpan(ctx, otelSpan)
 
-	return ctx, span, otelSpan
+	ctx = metadata.NewOutgoingContext(ctx, md)
+	return ctx
 }
