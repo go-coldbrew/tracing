@@ -16,7 +16,7 @@ Package tracing is a library that provides distributed tracing to Go application
 
 - [func ClientSpan\(operationName string, ctx context.Context\) \(context.Context, opentracing.Span, otelTrace.Span\)](<#ClientSpan>)
 - [func CloneContextValues\(parent context.Context\) context.Context](<#CloneContextValues>)
-- [func GRPCTracingSpan\(operationName string, ctx context.Context\) \(context.Context, opentracing.Span, otelTrace.Span\)](<#GRPCTracingSpan>)
+- [func GRPCTracingSpan\(operationName string, ctx context.Context\) context.Context](<#GRPCTracingSpan>)
 - [func MergeContextValues\(parent context.Context, main context.Context\) context.Context](<#MergeContextValues>)
 - [func MergeParentContext\(parent context.Context, main context.Context\) context.Context](<#MergeParentContext>)
 - [func NewContextWithParentValues\(parent context.Context\) context.Context](<#NewContextWithParentValues>)
@@ -28,7 +28,7 @@ Package tracing is a library that provides distributed tracing to Go application
 
 
 <a name="ClientSpan"></a>
-## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L337>)
+## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L361>)
 
 ```go
 func ClientSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span, otelTrace.Span)
@@ -46,10 +46,10 @@ func CloneContextValues(parent context.Context) context.Context
 CloneContextValues clones a given context values and returns a new context obj which is not affected by Cancel, Deadline etc Deprecated: The function name is a bit confusing, use CloneContextValues instead
 
 <a name="GRPCTracingSpan"></a>
-## func [GRPCTracingSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L362>)
+## func [GRPCTracingSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L386>)
 
 ```go
-func GRPCTracingSpan(operationName string, ctx context.Context) (context.Context, opentracing.Span, otelTrace.Span)
+func GRPCTracingSpan(operationName string, ctx context.Context) context.Context
 ```
 
 GRPCTracingSpan starts a new client span linked to the existing spans if any are found in the context. The returned context should be used in place of the original
