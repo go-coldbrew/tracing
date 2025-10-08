@@ -2,8 +2,6 @@
 
 [![GoDoc](https://img.shields.io/badge/pkg.go.dev-doc-blue)](http://pkg.go.dev/github.com/go-coldbrew/tracing)
 
-
-
 # newrelic
 
 ```go
@@ -13,25 +11,24 @@ import "github.com/go-coldbrew/tracing/newrelic"
 ## Index
 
 - [Variables](<#variables>)
-- [func FinishNRTransaction\(ctx context.Context, err error\)](<#FinishNRTransaction>)
-- [func GetNewRelicApp\(\) \*newrelic.Application](<#GetNewRelicApp>)
-- [func GetNewRelicTransactionFromContext\(ctx context.Context\) \*newrelic.Transaction](<#GetNewRelicTransactionFromContext>)
-- [func GetOrStartNew\(ctx context.Context, name string\) \(\*newrelic.Transaction, context.Context\)](<#GetOrStartNew>)
-- [func IgnoreNRTransaction\(ctx context.Context\)](<#IgnoreNRTransaction>)
-- [func SetNewRelicApp\(nr \*newrelic.Application\)](<#SetNewRelicApp>)
-- [func StartNRTransaction\(path string, ctx context.Context, req \*http.Request, w http.ResponseWriter\) context.Context](<#StartNRTransaction>)
-- [func StoreNewRelicTransactionToContext\(ctx context.Context, t \*newrelic.Transaction\) context.Context](<#StoreNewRelicTransactionToContext>)
+- [func FinishNRTransaction(ctx context.Context, err error)](<#func-finishnrtransaction>)
+- [func GetNewRelicApp() *newrelic.Application](<#func-getnewrelicapp>)
+- [func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transaction](<#func-getnewrelictransactionfromcontext>)
+- [func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, context.Context)](<#func-getorstartnew>)
+- [func IgnoreNRTransaction(ctx context.Context)](<#func-ignorenrtransaction>)
+- [func SetNewRelicApp(nr *newrelic.Application)](<#func-setnewrelicapp>)
+- [func StartNRTransaction(path string, ctx context.Context, req *http.Request, w http.ResponseWriter) context.Context](<#func-startnrtransaction>)
+- [func StoreNewRelicTransactionToContext(ctx context.Context, t *newrelic.Transaction) context.Context](<#func-storenewrelictransactiontocontext>)
 
 
 ## Variables
 
-<a name="NewRelicApp"></a>NewRelicApp is the reference for newrelic application
+NewRelicApp is the reference for newrelic application
 
 ```go
 var NewRelicApp *newrelic.Application
 ```
 
-<a name="FinishNRTransaction"></a>
 ## func [FinishNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L82>)
 
 ```go
@@ -40,16 +37,12 @@ func FinishNRTransaction(ctx context.Context, err error)
 
 FinishNRTransaction finishes an existing transaction if there is no transaction in the context, it does nothing
 
-<a name="GetNewRelicApp"></a>
 ## func [GetNewRelicApp](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L19>)
 
 ```go
 func GetNewRelicApp() *newrelic.Application
 ```
 
-
-
-<a name="GetNewRelicTransactionFromContext"></a>
 ## func [GetNewRelicTransactionFromContext](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L27>)
 
 ```go
@@ -58,7 +51,6 @@ func GetNewRelicTransactionFromContext(ctx context.Context) *newrelic.Transactio
 
 GetNewRelicTransactionFromContext fetches the new relic transaction that is stored in the context if there is no transaction in the context, it returns nil
 
-<a name="GetOrStartNew"></a>
 ## func [GetOrStartNew](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L33>)
 
 ```go
@@ -67,7 +59,6 @@ func GetOrStartNew(ctx context.Context, name string) (*newrelic.Transaction, con
 
 GetOrStartNew returns a new relic transaction from context if there is no transaction in the context, it starts a new transaction
 
-<a name="IgnoreNRTransaction"></a>
 ## func [IgnoreNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L92>)
 
 ```go
@@ -76,16 +67,12 @@ func IgnoreNRTransaction(ctx context.Context)
 
 IgnoreNRTransaction ignores this NR trasaction and prevents it from being reported can be used to ignore health check transactions etc
 
-<a name="SetNewRelicApp"></a>
 ## func [SetNewRelicApp](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L15>)
 
 ```go
 func SetNewRelicApp(nr *newrelic.Application)
 ```
 
-
-
-<a name="StartNRTransaction"></a>
 ## func [StartNRTransaction](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L49>)
 
 ```go
@@ -94,7 +81,6 @@ func StartNRTransaction(path string, ctx context.Context, req *http.Request, w h
 
 StartNRTransaction starts a new newrelic transaction if there is already a transaction in the context, it will start a child transaction
 
-<a name="StoreNewRelicTransactionToContext"></a>
 ## func [StoreNewRelicTransactionToContext](<https://github.com/go-coldbrew/tracing/blob/main/newrelic/newrelic.go#L43>)
 
 ```go
@@ -102,5 +88,7 @@ func StoreNewRelicTransactionToContext(ctx context.Context, t *newrelic.Transact
 ```
 
 StoreNewRelicTransactionToContext stores a new relic transaction object to context if there is already a transaction in the context, it will be overwritten by the new one passed in the argument
+
+
 
 Generated by [gomarkdoc](<https://github.com/princjef/gomarkdoc>)
