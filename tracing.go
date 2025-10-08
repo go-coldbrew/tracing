@@ -368,11 +368,16 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 	ctx = opentracing.ContextWithSpan(ctx, span)
 
 	// OpenTelemetry span: extract parent from incoming gRPC metadata
-	ctx = otelutil.ExtractHTTPHeaders(ctx, md)
+	ctx = otelutil.ExtractHTTPMetadata(ctx, md)
 
+	// Start server span
 	ctx, oTelSpan := otelutil.StartSpan(ctx, operationName, oteltracing.WithSpanKind(oteltracing.SpanKindServer))
 	ctx = oteltracing.ContextWithSpan(ctx, oTelSpan)
 
+	// Inject the updated OTel context back into metadata for downstream RPCs
+	otelutil.InjectGRPCMetadata(ctx, md)
+
+	// Return context with outgoing metadata
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	return ctx
 }

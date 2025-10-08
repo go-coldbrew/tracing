@@ -94,8 +94,14 @@ func InjectHTTPHeaders(ctx context.Context, hdr http.Header) {
 	propagator.Inject(ctx, propagation.HeaderCarrier(hdr))
 }
 
-// ExtractHTTPHeaders extracts OTel context from HTTP headers.
-func ExtractHTTPHeaders(ctx context.Context, md metadata.MD) context.Context {
+// InjectGRPCMetadata injects the OTel context into gRPC metadata for outgoing calls.
+func InjectGRPCMetadata(ctx context.Context, md metadata.MD) {
+	propagator := otel.GetTextMapPropagator()
+	propagator.Inject(ctx, metadataTextMapCarrier{md: &md})
+}
+
+// ExtractHTTPMetadata extracts OTel context from HTTP headers.
+func ExtractHTTPMetadata(ctx context.Context, md metadata.MD) context.Context {
 	propagator := otel.GetTextMapPropagator()
 	return propagator.Extract(ctx, &metadataTextMapCarrier{md: &md})
 }
