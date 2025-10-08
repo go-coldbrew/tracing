@@ -5,10 +5,11 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/propagation"
 	"net/http"
 	"runtime/trace"
 	"strings"
+
+	"go.opentelemetry.io/otel/propagation"
 
 	nrutil "github.com/go-coldbrew/tracing/newrelic"
 	newrelic "github.com/newrelic/go-agent/v3/newrelic"
@@ -39,6 +40,7 @@ type Span interface {
 
 type tracingSpan struct {
 	openSpan        opentracing.Span
+	otelSpan        otelTrace.Span
 	datastore       bool
 	external        bool
 	dataSegment     newrelic.DatastoreSegment
@@ -46,7 +48,6 @@ type tracingSpan struct {
 	segment         newrelic.Segment
 	runtimeRegion   *trace.Region
 	txn             *newrelic.Transaction
-	otelSpan        otelTrace.Span
 }
 
 func (span *tracingSpan) End() {
@@ -80,7 +81,9 @@ func (span *tracingSpan) End() {
 	}
 }
 
-func (span *tracingSpan) Finish() { span.End() }
+func (span *tracingSpan) Finish() {
+	span.End()
+}
 
 func (span *tracingSpan) SetTag(key string, value interface{}) {
 	if span == nil {
