@@ -235,6 +235,7 @@ func NewHTTPExternalSpan(ctx context.Context, name string, url string, hdr http.
 func traceHTTPHeaders(ctx context.Context, sp opentracing.Span, hdr http.Header) {
 	// Transmit the span's TraceContext as HTTP headers on our
 	// outbound request.
+	// Best-effort trace propagation — inject errors are non-fatal
 	_ = opentracing.GlobalTracer().Inject(
 		sp.Context(),
 		opentracing.HTTPHeaders,
@@ -301,8 +302,11 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 
 	var span opentracing.Span
 	wireContext, err := tracer.Extract(opentracing.TextMap, metadataReaderWriter{&md})
-	_ = err
-	span = tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
+	if err != nil {
+		span = tracer.StartSpan(operationName)
+	} else {
+		span = tracer.StartSpan(operationName, otext.RPCServerOption(wireContext))
+	}
 	ctx = opentracing.ContextWithSpan(ctx, span)
 	ctx = metadata.NewOutgoingContext(ctx, md)
 	return ctx
