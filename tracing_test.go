@@ -144,3 +144,20 @@ func TestClientSpan(t *testing.T) {
 	childSpan.Finish()
 	parentSpan.Finish()
 }
+
+func TestGRPCTracingSpan(t *testing.T) {
+	ctx := context.Background()
+	// Test with no existing span in context
+	newCtx := GRPCTracingSpan("test-operation", ctx)
+	if newCtx == nil {
+		t.Fatal("expected non-nil context")
+	}
+
+	// Test with existing span in context (via ClientSpan)
+	ctxWithSpan, span := ClientSpan("parent-op", ctx)
+	defer span.Finish()
+	newCtx2 := GRPCTracingSpan("child-operation", ctxWithSpan)
+	if newCtx2 == nil {
+		t.Fatal("expected non-nil context with parent span")
+	}
+}
