@@ -169,7 +169,7 @@ func main() {
 	ctx := context.Background()
 
 	// Create a span for an external service call
-	span, ctx := tracing.NewExternalSpan(ctx, "payment-gateway", "https://api.payments.example.com/charge")
+	span, ctx := tracing.NewExternalSpan(ctx, "payment-gateway", "/charge")
 	defer span.End()
 
 	// Make the external call — the span tracks the dependency
