@@ -1,6 +1,6 @@
 module github.com/go-coldbrew/tracing
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/newrelic/go-agent/v3 v3.42.0
