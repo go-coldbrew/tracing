@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/go-coldbrew/tracing/actions/workflows/go.yml/badge.svg)](https://github.com/go-coldbrew/tracing/actions/workflows/go.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-coldbrew/tracing)](https://goreportcard.com/report/github.com/go-coldbrew/tracing)
-[![GoDoc](https://pkg.go.dev/badge/github.com/go-coldbrew/tracing.svg)](https://pkg.go.dev/github.com/go-coldbrew/tracing)
+[![GoDoc](https://pkg.go.dev/badge/github.com/go-coldbrew/tracing/newrelic.svg)](https://pkg.go.dev/github.com/go-coldbrew/tracing/newrelic)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 

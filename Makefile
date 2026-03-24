@@ -7,7 +7,8 @@ test:
 
 doc:
 	go install github.com/princjef/gomarkdoc/cmd/gomarkdoc@latest
-	gomarkdoc ./...
+	gomarkdoc .
+	cd newrelic && gomarkdoc .
 
 lint:
 	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
