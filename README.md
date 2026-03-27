@@ -13,10 +13,13 @@
 import "github.com/go-coldbrew/tracing"
 ```
 
-Package tracing is a library that provides distributed tracing to Go applications. It offers features such as collecting performance data of an application, identifying where requests are spending most of their time, and segmenting requests. It supports exporting traces to 3rd\-party services such as Jaeger, Zipkin, Opentelemetry, and NewRelic. Go\-Coldbrew Tracing helps developers quickly identify issues and take corrective action when performance bottlenecks occur.
+Package tracing provides distributed tracing for Go applications. It offers features such as collecting performance data, identifying where requests spend most of their time, and segmenting requests.
+
+Traces are created using OpenTracing APIs and exported via the configured global tracer \(opentracing.GlobalTracer\). The core package configures this tracer at startup — typically an OpenTelemetry bridge that sends traces to any OTLP\-compatible backend \(Jaeger, Grafana Tempo, Honeycomb, etc.\) or New Relic.
 
 ## Index
 
+- [Constants](<#constants>)
 - [func ClientSpan\(operationName string, ctx context.Context\) \(context.Context, opentracing.Span\)](<#ClientSpan>)
 - [func CloneContextValues\(parent context.Context\) context.Context](<#CloneContextValues>)
 - [func GRPCTracingSpan\(operationName string, ctx context.Context\) context.Context](<#GRPCTracingSpan>)
@@ -29,6 +32,14 @@ Package tracing is a library that provides distributed tracing to Go application
   - [func NewHTTPExternalSpan\(ctx context.Context, name string, url string, hdr http.Header\) \(Span, context.Context\)](<#NewHTTPExternalSpan>)
   - [func NewInternalSpan\(ctx context.Context, name string\) \(Span, context.Context\)](<#NewInternalSpan>)
 
+
+## Constants
+
+<a name="SupportPackageIsVersion1"></a>SupportPackageIsVersion1 is a compile\-time assertion constant. Downstream packages reference this to enforce version compatibility.
+
+```go
+const SupportPackageIsVersion1 = true
+```
 
 <a name="ClientSpan"></a>
 ## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L272>)
