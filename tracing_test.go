@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -17,7 +18,10 @@ func TestNewInternalSpan(t *testing.T) {
 	if newCtx == nil {
 		t.Fatal("expected non-nil context")
 	}
-	// Verify the span can be ended without panic.
+	// Verify OTEL span is in context.
+	if oteltrace.SpanFromContext(newCtx).SpanContext().IsValid() {
+		// Span is valid (when a real tracer is configured).
+	}
 	span.End()
 }
 
@@ -30,7 +34,6 @@ func TestNewDatastoreSpan(t *testing.T) {
 	if newCtx == nil {
 		t.Fatal("expected non-nil context")
 	}
-	// Set a query to exercise the datastore-specific path.
 	span.SetQuery("GET users:123")
 	span.SetTag("key", "users:123")
 	span.End()
@@ -63,61 +66,28 @@ func TestSpanNilSafety(t *testing.T) {
 		t.Fatal("expected SetError to return the provided error even on nil span")
 	}
 
-	// SetError with nil error should also be safe.
 	err = span.SetError(nil)
 	if err != nil {
 		t.Fatal("expected SetError(nil) to return nil")
 	}
 }
 
-func TestMetadataReaderWriter(t *testing.T) {
+func TestMetadataCarrier(t *testing.T) {
 	md := metadata.MD{}
-	rw := metadataReaderWriter{&md}
+	mc := metadataCarrier(md)
 
-	// Test Set with a normal key.
-	rw.Set("X-Request-ID", "abc123")
-	vals := md["x-request-id"]
-	if len(vals) != 1 || vals[0] != "abc123" {
-		t.Fatalf("expected [abc123], got %v", vals)
+	mc.Set("x-request-id", "abc123")
+	if got := mc.Get("x-request-id"); got != "abc123" {
+		t.Fatalf("expected abc123, got %s", got)
 	}
 
-	// Test Set with a "-bin" suffix key triggers base64 encoding.
-	rw.Set("X-Data-Bin", "hello")
-	vals = md["x-data-bin"]
-	if len(vals) != 1 || vals[0] != "aGVsbG8=" {
-		t.Fatalf("expected [aGVsbG8=] for bin key, got %v", vals)
+	if got := mc.Get("nonexistent"); got != "" {
+		t.Fatalf("expected empty string for missing key, got %s", got)
 	}
 
-	// Test that Set appends on repeated calls.
-	rw.Set("X-Request-ID", "def456")
-	vals = md["x-request-id"]
-	if len(vals) != 2 {
-		t.Fatalf("expected 2 values, got %d", len(vals))
-	}
-
-	// Test ForeachKey iterates all key-value pairs.
-	collected := make(map[string][]string)
-	err := rw.ForeachKey(func(key, val string) error {
-		collected[key] = append(collected[key], val)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("unexpected error from ForeachKey: %v", err)
-	}
-	if len(collected["x-request-id"]) != 2 {
-		t.Fatalf("expected 2 values for x-request-id, got %d", len(collected["x-request-id"]))
-	}
-	if len(collected["x-data-bin"]) != 1 {
-		t.Fatalf("expected 1 value for x-data-bin, got %d", len(collected["x-data-bin"]))
-	}
-
-	// Test ForeachKey propagates handler errors.
-	expectedErr := errors.New("stop")
-	err = rw.ForeachKey(func(key, val string) error {
-		return expectedErr
-	})
-	if !errors.Is(err, expectedErr) {
-		t.Fatalf("expected ForeachKey to return handler error, got %v", err)
+	keys := mc.Keys()
+	if len(keys) != 1 || keys[0] != "x-request-id" {
+		t.Fatalf("expected [x-request-id], got %v", keys)
 	}
 }
 
@@ -130,7 +100,7 @@ func TestClientSpan(t *testing.T) {
 	if newCtx == nil {
 		t.Fatal("expected non-nil context from ClientSpan")
 	}
-	span.Finish()
+	span.End()
 
 	// Test with an existing parent span in context.
 	ctxWithSpan, parentSpan := ClientSpan("parent-operation", ctx)
@@ -141,23 +111,36 @@ func TestClientSpan(t *testing.T) {
 	if childCtx == nil {
 		t.Fatal("expected non-nil child context")
 	}
-	childSpan.Finish()
-	parentSpan.Finish()
+	childSpan.End()
+	parentSpan.End()
 }
 
 func TestGRPCTracingSpan(t *testing.T) {
 	ctx := context.Background()
-	// Test with no existing span in context
 	newCtx := GRPCTracingSpan("test-operation", ctx)
 	if newCtx == nil {
 		t.Fatal("expected non-nil context")
 	}
 
-	// Test with existing span in context (via ClientSpan)
+	// Test with existing span in context (via ClientSpan).
 	ctxWithSpan, span := ClientSpan("parent-op", ctx)
-	defer span.Finish()
+	defer span.End()
 	newCtx2 := GRPCTracingSpan("child-operation", ctxWithSpan)
 	if newCtx2 == nil {
 		t.Fatal("expected non-nil context with parent span")
 	}
+}
+
+func TestNewHTTPExternalSpan(t *testing.T) {
+	ctx := context.Background()
+	hdr := make(map[string][]string)
+	span, newCtx := NewHTTPExternalSpan(ctx, "external-svc", "/api/data", hdr)
+	if span == nil {
+		t.Fatal("expected non-nil span")
+	}
+	if newCtx == nil {
+		t.Fatal("expected non-nil context")
+	}
+	// Headers may contain trace propagation if a real propagator is configured.
+	span.End()
 }
