@@ -9,7 +9,7 @@ type cloneContext struct {
 	parent          context.Context
 }
 
-func (c *cloneContext) Value(key interface{}) interface{} {
+func (c *cloneContext) Value(key any) any {
 	// look for value in new context
 	val := c.Context.Value(key)
 	if val != nil {
@@ -19,8 +19,9 @@ func (c *cloneContext) Value(key interface{}) interface{} {
 	return c.parent.Value(key)
 }
 
-// CloneContextValues clones a given context values and returns a new context obj which is not affected by Cancel, Deadline etc
-// Deprecated: The function name is a bit confusing, use CloneContextValues instead
+// Deprecated: Use [NewContextWithParentValues] instead.
+//
+//go:fix inline
 func CloneContextValues(parent context.Context) context.Context {
 	return NewContextWithParentValues(parent)
 }
@@ -34,8 +35,9 @@ func NewContextWithParentValues(parent context.Context) context.Context {
 	}
 }
 
-// MergeParentContext merged the given main context with a parent context, Cancel/Deadline etc are used from the main context and values are looked in both the contexts
-// Deprecated: The function name is a bit confusing, use MergeContextValues instead
+// Deprecated: Use [MergeContextValues] instead.
+//
+//go:fix inline
 func MergeParentContext(parent context.Context, main context.Context) context.Context {
 	return MergeContextValues(parent, main)
 }
