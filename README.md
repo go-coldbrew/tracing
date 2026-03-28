@@ -42,7 +42,7 @@ const SupportPackageIsVersion1 = true
 ```
 
 <a name="ClientSpan"></a>
-## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L270>)
+## func [ClientSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L271>)
 
 ```go
 func ClientSpan(operationName string, ctx context.Context) (context.Context, oteltrace.Span)
@@ -51,16 +51,16 @@ func ClientSpan(operationName string, ctx context.Context) (context.Context, ote
 ClientSpan starts a new client span linked to the existing spans if any are found in the context. The returned context should be used in place of the original.
 
 <a name="CloneContextValues"></a>
-## func [CloneContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L24>)
+## func [CloneContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L25>)
 
 ```go
 func CloneContextValues(parent context.Context) context.Context
 ```
 
-CloneContextValues clones a given context values and returns a new context obj which is not affected by Cancel, Deadline etc Deprecated: The function name is a bit confusing, use CloneContextValues instead
+Deprecated: Use [NewContextWithParentValues](<#NewContextWithParentValues>) instead.
 
 <a name="GRPCTracingSpan"></a>
-## func [GRPCTracingSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L276>)
+## func [GRPCTracingSpan](<https://github.com/go-coldbrew/tracing/blob/main/tracing.go#L277>)
 
 ```go
 func GRPCTracingSpan(operationName string, ctx context.Context) context.Context
@@ -69,7 +69,7 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context
 GRPCTracingSpan starts a new server span from incoming gRPC metadata. The returned context should be used in place of the original.
 
 <a name="MergeContextValues"></a>
-## func [MergeContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L45>)
+## func [MergeContextValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L47>)
 
 ```go
 func MergeContextValues(parent context.Context, main context.Context) context.Context
@@ -78,16 +78,16 @@ func MergeContextValues(parent context.Context, main context.Context) context.Co
 MergeContextValues merged the given main context with a parent context, Cancel/Deadline etc are used from the main context and values are looked in both the contexts can be use to merge a parent context with a new context, the new context will have the values from both the contexts
 
 <a name="MergeParentContext"></a>
-## func [MergeParentContext](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L39>)
+## func [MergeParentContext](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L41>)
 
 ```go
 func MergeParentContext(parent context.Context, main context.Context) context.Context
 ```
 
-MergeParentContext merged the given main context with a parent context, Cancel/Deadline etc are used from the main context and values are looked in both the contexts Deprecated: The function name is a bit confusing, use MergeContextValues instead
+Deprecated: Use [MergeContextValues](<#MergeContextValues>) instead.
 
 <a name="NewContextWithParentValues"></a>
-## func [NewContextWithParentValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L30>)
+## func [NewContextWithParentValues](<https://github.com/go-coldbrew/tracing/blob/main/context.go#L31>)
 
 ```go
 func NewContextWithParentValues(parent context.Context) context.Context
@@ -107,7 +107,7 @@ type Span interface {
     // Finish ends the span, can also use End()
     Finish()
     // SetTag sets a tag on the span, can be used to add custom attributes
-    SetTag(key string, value interface{})
+    SetTag(key string, value any)
     // SetQuery sets the query on the span, can be used to add query for datastore spans
     SetQuery(query string)
     // SetError sets the error on the span

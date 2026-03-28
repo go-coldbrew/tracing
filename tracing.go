@@ -21,7 +21,7 @@ const tracerName = "github.com/go-coldbrew/tracing"
 
 // toAttribute converts a key-value pair to a typed OTEL attribute,
 // preserving numeric and boolean types instead of stringifying everything.
-func toAttribute(key string, value interface{}) attribute.KeyValue {
+func toAttribute(key string, value any) attribute.KeyValue {
 	switch v := value.(type) {
 	case string:
 		return attribute.String(key, v)
@@ -47,7 +47,7 @@ type Span interface {
 	// Finish ends the span, can also use End()
 	Finish()
 	// SetTag sets a tag on the span, can be used to add custom attributes
-	SetTag(key string, value interface{})
+	SetTag(key string, value any)
 	// SetQuery sets the query on the span, can be used to add query for datastore spans
 	SetQuery(query string)
 	// SetError sets the error on the span
@@ -90,7 +90,7 @@ func (span *tracingSpan) Finish() {
 	span.End()
 }
 
-func (span *tracingSpan) SetTag(key string, value interface{}) {
+func (span *tracingSpan) SetTag(key string, value any) {
 	if span == nil {
 		return
 	}
