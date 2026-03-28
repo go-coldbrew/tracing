@@ -291,8 +291,9 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 	)
 
-	// Inject into fresh outgoing metadata for downstream propagation.
-	outMD := metadata.MD{}
+	// Preserve existing outgoing metadata and inject trace context into it.
+	outMD, _ := metadata.FromOutgoingContext(ctx)
+	outMD = outMD.Copy()
 	prop.Inject(ctx, metadataCarrier(outMD))
 	ctx = metadata.NewOutgoingContext(ctx, outMD)
 	return ctx

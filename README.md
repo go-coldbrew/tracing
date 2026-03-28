@@ -15,7 +15,7 @@ import "github.com/go-coldbrew/tracing"
 
 Package tracing provides distributed tracing for Go applications. It offers features such as collecting performance data, identifying where requests spend most of their time, and segmenting requests.
 
-Traces are created using OpenTracing APIs and exported via the configured global tracer \(opentracing.GlobalTracer\). The core package configures this tracer at startup — typically an OpenTelemetry bridge that sends traces to any OTLP\-compatible backend \(Jaeger, Grafana Tempo, Honeycomb, etc.\) or New Relic.
+Traces are created and exported via OpenTelemetry. The core package configures the OTEL tracer provider at startup, sending traces to any OTLP\-compatible backend \(Jaeger, Grafana Tempo, Honeycomb, etc.\) or New Relic.
 
 ## Index
 

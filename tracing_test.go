@@ -3,6 +3,7 @@ package tracing
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"google.golang.org/grpc/metadata"
@@ -130,7 +131,7 @@ func TestGRPCTracingSpan(t *testing.T) {
 
 func TestNewHTTPExternalSpan(t *testing.T) {
 	ctx := context.Background()
-	hdr := make(map[string][]string)
+	hdr := make(http.Header)
 	span, newCtx := NewHTTPExternalSpan(ctx, "external-svc", "/api/data", hdr)
 	if span == nil {
 		t.Fatal("expected non-nil span")
