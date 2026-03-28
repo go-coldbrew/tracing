@@ -19,6 +19,25 @@ import (
 
 const tracerName = "github.com/go-coldbrew/tracing"
 
+// toAttribute converts a key-value pair to a typed OTEL attribute,
+// preserving numeric and boolean types instead of stringifying everything.
+func toAttribute(key string, value interface{}) attribute.KeyValue {
+	switch v := value.(type) {
+	case string:
+		return attribute.String(key, v)
+	case int:
+		return attribute.Int(key, v)
+	case int64:
+		return attribute.Int64(key, v)
+	case float64:
+		return attribute.Float64(key, v)
+	case bool:
+		return attribute.Bool(key, v)
+	default:
+		return attribute.String(key, fmt.Sprint(v))
+	}
+}
+
 // Span defines an interface for implementing a tracing span.
 // Consumers use this to create and annotate spans without coupling to a
 // specific tracing backend.
@@ -75,7 +94,7 @@ func (span *tracingSpan) SetTag(key string, value interface{}) {
 	if span == nil {
 		return
 	}
-	span.otelSpan.SetAttributes(attribute.String(key, fmt.Sprint(value)))
+	span.otelSpan.SetAttributes(toAttribute(key, value))
 	if span.datastore {
 		span.dataSegment.AddAttribute(key, value)
 	} else if span.external {
@@ -89,7 +108,7 @@ func (span *tracingSpan) SetQuery(query string) {
 	if span == nil {
 		return
 	}
-	span.otelSpan.SetAttributes(attribute.String("query", query))
+	span.otelSpan.SetAttributes(toAttribute("query", query))
 	if span.datastore {
 		span.dataSegment.ParameterizedQuery = query
 	}
@@ -272,9 +291,10 @@ func GRPCTracingSpan(operationName string, ctx context.Context) context.Context 
 		oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 	)
 
-	// Re-inject into outgoing metadata for downstream propagation.
-	prop.Inject(ctx, metadataCarrier(md))
-	ctx = metadata.NewOutgoingContext(ctx, md)
+	// Inject into fresh outgoing metadata for downstream propagation.
+	outMD := metadata.MD{}
+	prop.Inject(ctx, metadataCarrier(outMD))
+	ctx = metadata.NewOutgoingContext(ctx, outMD)
 	return ctx
 }
 

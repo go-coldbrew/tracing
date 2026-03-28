@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -18,10 +17,8 @@ func TestNewInternalSpan(t *testing.T) {
 	if newCtx == nil {
 		t.Fatal("expected non-nil context")
 	}
-	// Verify OTEL span is in context.
-	if oteltrace.SpanFromContext(newCtx).SpanContext().IsValid() {
-		// Span is valid (when a real tracer is configured).
-	}
+	// With the noop tracer, the span context won't be valid,
+	// but we verify a span exists and can be ended without panic.
 	span.End()
 }
 
