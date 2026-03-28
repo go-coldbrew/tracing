@@ -253,8 +253,9 @@ func NewExternalSpan(ctx context.Context, name string, url string) (Span, contex
 // correlate the call back to this service.
 func NewHTTPExternalSpan(ctx context.Context, name string, url string, hdr http.Header) (Span, context.Context) {
 	s, ctx := buildExternalSpan(ctx, name, url)
-	// Inject OTEL trace context into outbound HTTP headers.
-	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(hdr))
+	if hdr != nil {
+		otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(hdr))
+	}
 	return s, ctx
 }
 
@@ -307,7 +308,8 @@ func (mc metadataCarrier) Get(key string) string {
 	if len(vals) == 0 {
 		return ""
 	}
-	return vals[0]
+	// Join multiple values for W3C baggage/tracestate compatibility.
+	return strings.Join(vals, ",")
 }
 
 func (mc metadataCarrier) Set(key, value string) {
