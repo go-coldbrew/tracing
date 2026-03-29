@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	neturl "net/url"
 	"runtime/trace"
 	"strings"
 
@@ -109,9 +110,11 @@ func (span *tracingSpan) SetQuery(query string) {
 	if span == nil {
 		return
 	}
-	span.otelSpan.SetAttributes(semconv.DBQueryText(query))
 	if span.datastore {
+		span.otelSpan.SetAttributes(semconv.DBQueryText(query))
 		span.dataSegment.ParameterizedQuery = query
+	} else {
+		span.otelSpan.SetAttributes(attribute.String("query", query))
 	}
 }
 
@@ -217,9 +220,13 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 		url = "http://" + name + "/" + url
 	}
 
+	serverAddr := name
+	if parsed, err := neturl.Parse(url); err == nil && parsed.Hostname() != "" {
+		serverAddr = parsed.Hostname()
+	}
 	clientSpan.SetAttributes(
 		semconv.URLFull(url),
-		semconv.ServerAddress(name),
+		semconv.ServerAddress(serverAddr),
 	)
 	txnStarted := false
 	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
