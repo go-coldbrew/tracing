@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	neturl "net/url"
 	"runtime/trace"
 	"strings"
 
@@ -13,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/metadata"
 )
@@ -108,9 +110,11 @@ func (span *tracingSpan) SetQuery(query string) {
 	if span == nil {
 		return
 	}
-	span.otelSpan.SetAttributes(toAttribute("query", query))
 	if span.datastore {
+		span.otelSpan.SetAttributes(semconv.DBQueryText(query))
 		span.dataSegment.ParameterizedQuery = query
+	} else {
+		span.otelSpan.SetAttributes(attribute.String("query", query))
 	}
 }
 
@@ -174,9 +178,9 @@ func NewDatastoreSpan(ctx context.Context, datastore, operation, collection stri
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 	)
 	otelSpan.SetAttributes(
-		attribute.String("store", datastore),
-		attribute.String("collection", collection),
-		attribute.String("operation", operation),
+		semconv.DBSystemNameKey.String(datastore),
+		semconv.DBCollectionName(collection),
+		semconv.DBOperationName(operation),
 	)
 
 	txnStarted := false
@@ -216,7 +220,14 @@ func buildExternalSpan(ctx context.Context, name string, url string) (*tracingSp
 		url = "http://" + name + "/" + url
 	}
 
-	clientSpan.SetAttributes(attribute.String("url", url))
+	serverAddr := name
+	if parsed, err := neturl.Parse(url); err == nil && parsed.Hostname() != "" {
+		serverAddr = parsed.Hostname()
+	}
+	clientSpan.SetAttributes(
+		semconv.URLFull(url),
+		semconv.ServerAddress(serverAddr),
+	)
 	txnStarted := false
 	txn := nrutil.GetNewRelicTransactionFromContext(ctx)
 	if txn == nil {
