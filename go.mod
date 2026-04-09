@@ -1,11 +1,12 @@
 module github.com/go-coldbrew/tracing
 
-go 1.25.8
+go 1.25.9
 
 require (
 	github.com/newrelic/go-agent/v3 v3.42.0
 	go.opentelemetry.io/otel v1.42.0
 	go.opentelemetry.io/otel/trace v1.42.0
+	go.uber.org/goleak v1.3.0
 	google.golang.org/grpc v1.79.3
 )
 
